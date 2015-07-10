@@ -1,62 +1,69 @@
-List = list         # A Lisp List -> a Python list
-Number = (int, float)  # A Lisp Number -> a Python int or float
+#import parsing
+#import sys
 
+from symbol import *
 
-class Symbol(str):
-    pass
-
-
-def standard_env():
-    '''An environment with some Lisp standard procedures.'''
-    import math
-    import operator as op
-    env = Env()
-    env.update(vars(math))  # sin, cos,etc
-    env.update({
-        '+': op.add, '-': op.sub,
-        '*': op.mul, '//': op.floordiv, '/': op.truediv,
-        '>': op.gt, '<': op.lt,
-        '>=': op.ge, '<=': op.le, '=': op.eq,
-        'abs':     abs,
-        'append':  op.add,
-        'begin': lambda *x: x[-1],
-        'car': lambda x: x[0],
-        'cdr': lambda x: x[1:],
-        'cons': lambda x, y: [x] + y,
-        'eq?': op.is_,
-        'equal?': op.eq,
-        'length': len,
-        'list': lambda *x: list(x),
-        'list?': lambda x: isinstance(x, list),
-        'map': map,
-        'max': max,
-        'min': min,
-        'not': op.not_,
-        'null?': lambda x: x == [],
-        'number?': lambda x: isinstance(x, Number),
-        'procedure?': callable,
-        'round':   round,
-        'symbol?': lambda x: isinstance(x, Symbol),
-    })
-    return env
-
+List = list
+Number = (int, float)
 
 class Env(dict):
-    '''An environment: a dict of {'var':val} pairs,
-     with an outer Env.'''
-    def __init__(self, parms=(), args=(), outer=None):
-        self.update(zip(parms, args))
+    "An environment: a dict of {'var':val} pairs, with an outer Env."
+    def __init__(self, params=(), args=(), outer=None):
+        # Bind param list to corresponding args, or single parm to list of args
         self.outer = outer
-
+        if isa(params, Symbol):
+            self.update({params:list(args)})
+        else:
+            if len(args) != len(params):
+                raise TypeError('expected %s, given %s, '
+                                % (to_string(params), to_string(args)))
+            self.update(zip(params,args))
     def find(self, var):
         "Find the innermost Env where var appears."
+        if var in self: return self
+        elif self.outer is None: raise LookupError(var)
+        else: return self.outer.find(var)
 
-        if self.outer is None:
-            return self if var in self else None
+def is_pair(x): return x != [] and isa(x, list)
+def cons(x, y): return [x]+y
 
-        return self if var in self else self.outer.find(var)
+def callcc(proc):
+    "Call proc with current continuation; escape only"
+    ball = RuntimeWarning("Sorry, can't continue this continuation any longer.")
+    def throw(retval): ball.retval = retval; raise ball
+    try:
+        return proc(throw)
+    except RuntimeWarning as w:
+        if w is ball: return ball.retval
+        else: raise w
 
-global_env = standard_env()  # will not be global for long
+def add_globals(self):
+    "Add some Scheme standard procedures."
+    import sys, math, cmath, operator as op
+    self.update(vars(math))
+    self.update(vars(cmath))
+    self.update({
+     '+':op.add, '-':op.sub, '*':op.mul, '/':op.truediv,
+     'not':op.not_,'>':op.gt, '<':op.lt, '>=':op.ge,
+     '<=':op.le, '=':op.eq,'equal?':op.eq, 'eq?':op.is_,
+     'length':len, 'cons':cons,'car':lambda x:x[0],
+     'cdr':lambda x:x[1:], 'append':op.add,
+     'list':lambda *x:list(x), 'list?': lambda x:isa(x,list),
+     'null?':lambda x:x==[], 'symbol?':lambda x: isa(x, Symbol),
+     'boolean?':lambda x: isa(x, bool), 'pair?':is_pair,
+     'port?': lambda x:isa(x,file), 'apply':lambda proc,l: proc(*l),
+     'eval':lambda x: eval(expand(x)), 'load':lambda fn: load(fn), 'call/cc':callcc,
+     'open-input-file':open,'close-input-port':lambda p: p.file.close(),
+     'open-output-file':lambda f:open(f,'w'), 'close-output-port':lambda p: p.close(),
+     #'eof-object?':lambda x:x is eof_object, 'read-char':parsing.readchar,
+     #'read':read, 'write':lambda x,port=sys.stdout:port.write(to_string(x)),
+     'display':lambda x,port=sys.stdout:port.write(x if isa(x,str) else to_string(x))})
+    return self
+
+isa = isinstance
+
+global_env = add_globals(Env())
+
 
 if __name__ == '__main__':
-    print(global_env.find("a"))
+    print(global_env.find("null?")["+"])
