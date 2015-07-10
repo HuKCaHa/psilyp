@@ -81,6 +81,11 @@ class Test(unittest.TestCase):
      2 ; more ; comments ; ) )
      3) ; final comment"""), "(1 2 3)")
 
+    def test_set(self):
+        eval_string("(define a 3)")
+        eval_string("(set! a 4)")
+        self.assertEqual(eval_string("a"), "4")
+
 
 if __name__ == '__main__':
     unittest.main()
