@@ -1,8 +1,8 @@
 from symbol import Symbol, Sym, _quote, _if, _set, _define, _lambda, _begin
 from symbol import _quasiquote, _unquote, _unquotesplicing
-import sys, io, re
+import io
+import re
 from env import *
-from lisp_eval import lisp_eval
 
 
 def parse(inport):
@@ -13,13 +13,16 @@ def parse(inport):
 
     return expand(read(inport), toplevel=True)
 
-eof_object = Symbol('#<eof-object>') # Note: uninterned; can't be read
+
+eof_object = Symbol('#<eof-object>')
+
 
 class InPort:
     "An input port. Retains a line of chars."
-    tokenizer = r"""\s*(,@|[('`,)]|"(?:[\\].|[^\\"])*"|;.*|[^\s('"`,;)]*)(.*)""" #magic string
+    tokenizer = r"""\s*(,@|[('`,)]|"(?:[\\].|[^\\"])*"|;.*|[^\s('"`,;)]*)(.*)"""
+
     def __init__(self, file):
-        self.file = file;
+        self.file = file
         self.line = ''
 
     def next_token(self):
@@ -33,6 +36,7 @@ class InPort:
             if token != '' and not token.startswith(';'):
                 return token
 
+
 def readchar(inport):
     "Read the next character from an input port."
     if inport.line != '':
@@ -41,8 +45,9 @@ def readchar(inport):
     else:
         return inport.file.read(1) or eof_object
 
+
 def read(inport):
-    "Read a Scheme expression from an input port."
+    "Read a Lisp expression from an input port."
     def read_ahead(token):
         if '(' == token:
             L = []
@@ -87,68 +92,53 @@ def atom(token):
                 return Sym(token)
 
 
-def to_string(x):
-    "Convert a Python object back into a Lisp-readable string."
-    if x is True:
-        return "#t"
-    elif x is False:
-        return "#f"
-    elif isa(x, Symbol):
-        return x
-    elif isa(x, str):
-        return '"%s"' % x.encode('string_escape').replace('"',r'\"')
-    elif isa(x, list):
-        return '('+' '.join(list(map(to_string, x)))+')'
-    elif isa(x, complex):
-        return str(x).replace('j', 'i')
-    else:
-        return str(x)
-
-
-
 def expand(x, toplevel=False):
-    "Walk tree of x, making optimizations/fixes, and signaling SyntaxError."
-    require(x, x!=[])                    # () => Error
+    "return tokens that make up x, and signaling SyntaxError."
+    require(x, x != [])                    # () => Error
     if not isa(x, list):                 # constant => unchanged
         return x
     elif x[0] is _quote:                 # (quote exp)
-        require(x, len(x)==2)
+        require(x, len(x) == 2)
         return x
     elif x[0] is _if:
-        if len(x)==3: x = x + [None]     # (if t c) => (if t c None)
-        require(x, len(x)==4)
+        if len(x) == 3:
+            x = x + [None]     # (if t c) => (if t c None)
+        require(x, len(x) == 4)
         return list(map(expand, x))
     elif x[0] is _set:
-        require(x, len(x)==3);
+        require(x, len(x) == 3)
         var = x[1]                       # (set! non-var exp) => Error
         require(x, isa(var, Symbol), "can set! only a symbol")
         return [_set, var, expand(x[2])]
     elif x[0] is _define:
-        require(x, len(x)>=3)
+        require(x, len(x) >= 3)
         _def, v, body = x[0], x[1], x[2:]
         if isa(v, list) and v:           # (define (f args) body)
             f, args = v[0], v[1:]        #  => (define f (lambda (args) body))
             return expand([_def, f, [_lambda, args]+body])
         else:
-            require(x, len(x)==3)        # (define non-var/list exp) => Error
+            require(x, len(x) == 3)        # (define non-var/list exp) => Error
             require(x, isa(v, Symbol), "can define only a symbol")
             exp = expand(x[2])
             return [_define, v, exp]
     elif x[0] is _begin:
-        if len(x)==1: return None        # (begin) => None
-        else: return [expand(xi, toplevel) for xi in x]
+        if len(x) == 1:
+            return None        # (begin) => None
+        else:
+            return [expand(xi, toplevel) for xi in x]
     elif x[0] is _lambda:                # (lambda (x) e1 e2)
-        require(x, len(x)>=3)            #  => (lambda (x) (begin e1 e2))
+        require(x, len(x) >= 3)          #  => (lambda (x) (begin e1 e2))
         vars, body = x[1], x[2:]
         require(x, (isa(vars, list) and all(isa(v, Symbol) for v in vars))
                 or isa(vars, Symbol), "illegal lambda argument list")
         exp = body[0] if len(body) == 1 else [_begin] + body
         return [_lambda, vars, expand(exp)]
     elif x[0] is _quasiquote:            # `x => expand_quasiquote(x)
-        require(x, len(x)==2)
+        require(x, len(x) == 2)
         return expand_quasiquote(x[1])
     else:
         return list(map(expand, x))            # (f arg...) => expand each
+
 
 def require(x, predicate, msg="wrong length"):
     "Signal a syntax error if predicate is false."
@@ -157,20 +147,17 @@ def require(x, predicate, msg="wrong length"):
 
 _append, _cons, _let = list(map(Sym, "append cons let".split()))
 
+
 def expand_quasiquote(x):
     """Expand `x => 'x; `,x => x; `(,@x y) => (append x y) """
     if not is_pair(x):
         return [_quote, x]
     require(x, x[0] is not _unquotesplicing, "can't splice here")
     if x[0] is _unquote:
-        require(x, len(x)==2)
+        require(x, len(x) == 2)
         return x[1]
     elif is_pair(x[0]) and x[0][0] is _unquotesplicing:
-        require(x[0], len(x[0])==2)
+        require(x[0], len(x[0]) == 2)
         return [_append, x[0][1], expand_quasiquote(x[1:])]
     else:
         return [_cons, expand_quasiquote(x[0]), expand_quasiquote(x[1:])]
-
-
-
-

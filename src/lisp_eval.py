@@ -2,7 +2,6 @@ from env import *
 from symbol import _quote, _if, _set, _define, _lambda, _begin
 
 
-
 def lisp_eval(x, env=global_env):
     "lisp_evaluate an expression in an environment."
     while True:
@@ -40,9 +39,11 @@ def lisp_eval(x, env=global_env):
             else:
                 return proc(*exps)
 
+
 class Procedure(object):
     "A user-defined Scheme procedure."
     def __init__(self, parms, exp, env):
         self.parms, self.exp, self.env = parms, exp, env
+
     def __call__(self, *args):
         return lisp_eval(self.exp, Env(self.parms, args, self.env))

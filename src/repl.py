@@ -1,5 +1,7 @@
-from parsing import *
-from time import sleep
+from parsing import InPort, parse, eof_object, to_string
+from lisp_eval import lisp_eval
+import sys
+
 
 def repl(prompt='psylip> ', inport=InPort(sys.stdin), out=sys.stdout):
     "A prompt-read-eval-print loop."
@@ -7,17 +9,19 @@ def repl(prompt='psylip> ', inport=InPort(sys.stdin), out=sys.stdout):
     while True:
         try:
             if prompt:
-                print(prompt, sep="\n",end=" ")
+                print(prompt, sep="\n", end=" ")
 
             val = eval_string(inport)
+
             if val is eof_object:
                 break
 
-            if val != None and out:
+            if val is not None and out:
                 print(val)
 
         except Exception as e:
             print ('%s: %s' % (type(e).__name__, e))
+
 
 def eval_string(inport):
     "Eval string or inport"
@@ -26,7 +30,10 @@ def eval_string(inport):
         return x
 
     val = lisp_eval(x)
+    if val is None:
+        return None
     return to_string(val)
+
 
 def load(filename):
     "Eval every expression from a file."
