@@ -1,5 +1,5 @@
 from env import *
-from symbol import _quote, _if, _set, _define, _lambda, _begin, _definemacro
+from symbol import _quote, _if, _set, _define, _lambda, _begin
 
 
 

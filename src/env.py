@@ -44,7 +44,7 @@ def add_globals(env):
      'null?':lambda x:x==[], 'symbol?':lambda x: isa(x, Symbol),
      'boolean?':lambda x: isa(x, bool), 'pair?':is_pair,
      'port?': lambda x:isa(x,file), 'apply':lambda proc,l: proc(*l),
-     'map': lambda f,*x: list(map(f, x)), 'filter': lambda f,x: list(filter(f,x)),
+     'map': lambda f,x: list(map(f, x)), 'filter': lambda f,x: list(filter(f,x)),
      'eval':lambda x: eval(expand(x)), 'load':lambda fn: load(fn),
      'open-input-file':open,'close-input-port':lambda p: p.file.close(),
      'open-output-file':lambda f:open(f,'w'), 'close-output-port':lambda p: p.close(),

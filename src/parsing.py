@@ -1,29 +1,34 @@
-from symbol import Symbol, Sym, _quote, _if, _set, _define, _lambda, _begin, _definemacro
+from symbol import Symbol, Sym, _quote, _if, _set, _define, _lambda, _begin
 from symbol import _quasiquote, _unquote, _unquotesplicing
 import sys, io, re
 from env import *
 from lisp_eval import lisp_eval
 
-isa = isinstance
 
 def parse(inport):
     "Parse a program: read and expand/error-check it."
-    # Backwards compatibility: given a str, convert it to an InPort
-    if isinstance(inport, str): inport = InPort(io.StringIO(inport))
+    # given a str, convert it to an InPort
+    if isinstance(inport, str):
+        inport = InPort(io.StringIO(inport))
+
     return expand(read(inport), toplevel=True)
 
 eof_object = Symbol('#<eof-object>') # Note: uninterned; can't be read
 
 class InPort:
     "An input port. Retains a line of chars."
-    tokenizer = r"""\s*(,@|[('`,)]|"(?:[\\].|[^\\"])*"|;.*|[^\s('"`,;)]*)(.*)"""
+    tokenizer = r"""\s*(,@|[('`,)]|"(?:[\\].|[^\\"])*"|;.*|[^\s('"`,;)]*)(.*)""" #magic string
     def __init__(self, file):
-        self.file = file; self.line = ''
+        self.file = file;
+        self.line = ''
+
     def next_token(self):
         "Return the next token, reading new text into line buffer if needed."
         while True:
-            if self.line == '': self.line = self.file.readline()
-            if self.line == '': return eof_object
+            if self.line == '':
+                self.line = self.file.readline()
+            if self.line == '':
+                return eof_object
             token, self.line = re.match(InPort.tokenizer, self.line).groups()
             if token != '' and not token.startswith(';'):
                 return token
@@ -64,49 +69,42 @@ quotes = {"'": _quote, "`": _quasiquote, ",": _unquote, ",@": _unquotesplicing}
 
 def atom(token):
     'Numbers become numbers; #t and #f are booleans; "..." string; otherwise Symbol.'
-    if token == '#t': return True
-    elif token == '#f': return False
-    elif token[0] == '"': return token[1:-1].decode('string_escape')
-    try: return int(token)
+    if token == '#t':
+        return True
+    elif token == '#f':
+        return False
+    elif token[0] == '"':
+        return token[1:-1].decode('string_escape')
+    try:
+        return int(token)
     except ValueError:
-        try: return float(token)
+        try:
+            return float(token)
         except ValueError:
-            try: return complex(token.replace('i', 'j', 1))
+            try:
+                return complex(token.replace('i', 'j', 1))
             except ValueError:
                 return Sym(token)
 
 
 def to_string(x):
     "Convert a Python object back into a Lisp-readable string."
-    if x is True: return "#t"
-    elif x is False: return "#f"
-    elif isa(x, Symbol): return x
-    elif isa(x, str): return '"%s"' % x.encode('string_escape').replace('"',r'\"')
-    elif isa(x, list): return '('+' '.join(list(map(to_string, x)))+')'
-    elif isa(x, complex): return str(x).replace('j', 'i')
-    else: return str(x)
+    if x is True:
+        return "#t"
+    elif x is False:
+        return "#f"
+    elif isa(x, Symbol):
+        return x
+    elif isa(x, str):
+        return '"%s"' % x.encode('string_escape').replace('"',r'\"')
+    elif isa(x, list):
+        return '('+' '.join(list(map(to_string, x)))+')'
+    elif isa(x, complex):
+        return str(x).replace('j', 'i')
+    else:
+        return str(x)
 
 
-def load(filename):
-    "Eval every expression from a file."
-    repl(None, InPort(open(filename)), None)
-
-
-def repl(prompt='lispy> ', inport=InPort(sys.stdin), out=sys.stdout):
-    "A prompt-read-eval-print loop."
-    sys.stderr.write("Lispy version 2.0\n")
-    while True:
-        try:
-            if prompt:
-                sys.stderr.write(prompt)
-            x = parse(inport)
-            if x is eof_object:
-                return
-            val = lisp_eval(x)
-            if val is not None and out:
-                print(to_string(val), file=out)
-        except Exception as e:
-            print ('%s: %s' % (type(e).__name__, e))
 
 def expand(x, toplevel=False):
     "Walk tree of x, making optimizations/fixes, and signaling SyntaxError."
@@ -125,7 +123,7 @@ def expand(x, toplevel=False):
         var = x[1]                       # (set! non-var exp) => Error
         require(x, isa(var, Symbol), "can set! only a symbol")
         return [_set, var, expand(x[2])]
-    elif x[0] is _define or x[0] is _definemacro:
+    elif x[0] is _define:
         require(x, len(x)>=3)
         _def, v, body = x[0], x[1], x[2:]
         if isa(v, list) and v:           # (define (f args) body)
@@ -135,12 +133,6 @@ def expand(x, toplevel=False):
             require(x, len(x)==3)        # (define non-var/list exp) => Error
             require(x, isa(v, Symbol), "can define only a symbol")
             exp = expand(x[2])
-            if _def is _definemacro:
-                require(x, toplevel, "define-macro only allowed at top level")
-                proc = lisp_eval(exp)
-                require(x, callable(proc), "macro must be a procedure")
-                macro_table[v] = proc    # (define-macro v proc)
-                return None              #  => None; add v:proc to macro_table
             return [_define, v, exp]
     elif x[0] is _begin:
         if len(x)==1: return None        # (begin) => None
@@ -155,14 +147,13 @@ def expand(x, toplevel=False):
     elif x[0] is _quasiquote:            # `x => expand_quasiquote(x)
         require(x, len(x)==2)
         return expand_quasiquote(x[1])
-    elif isa(x[0], Symbol) and x[0] in macro_table:
-        return expand(macro_table[x[0]](*x[1:]), toplevel) # (m arg...)
-    else:                                #        => macroexpand if m isa macro
+    else:
         return list(map(expand, x))            # (f arg...) => expand each
 
 def require(x, predicate, msg="wrong length"):
     "Signal a syntax error if predicate is false."
-    if not predicate: raise SyntaxError(to_string(x)+': '+msg)
+    if not predicate:
+        raise SyntaxError(to_string(x)+': '+msg)
 
 _append, _cons, _let = list(map(Sym, "append cons let".split()))
 
@@ -180,20 +171,6 @@ def expand_quasiquote(x):
     else:
         return [_cons, expand_quasiquote(x[0]), expand_quasiquote(x[1:])]
 
-def let(*args):
-    args = list(args)
-    x = cons(_let, args)
-    require(x, len(args)>1)
-    bindings, body = args[0], args[1:]
-    require(x, all(isa(b, list) and len(b)==2 and isa(b[0], Symbol)
-                   for b in bindings), "illegal binding list")
-    vars, vals = zip(*bindings)
-    return [[_lambda, list(vars)]+list(map(expand, body))] + list(map(expand, vals))
-
-macro_table = {_let:let} ## More macros can go here
 
 
-
-if __name__ == '__main__':
-    repl()
 
