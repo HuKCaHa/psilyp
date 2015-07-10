@@ -2,6 +2,7 @@
 #import sys
 
 from symbol import *
+#from parsing import eof_object, readchar
 
 List = list
 Number = (int, float)
@@ -27,22 +28,13 @@ class Env(dict):
 def is_pair(x): return x != [] and isa(x, list)
 def cons(x, y): return [x]+y
 
-def callcc(proc):
-    "Call proc with current continuation; escape only"
-    ball = RuntimeWarning("Sorry, can't continue this continuation any longer.")
-    def throw(retval): ball.retval = retval; raise ball
-    try:
-        return proc(throw)
-    except RuntimeWarning as w:
-        if w is ball: return ball.retval
-        else: raise w
 
-def add_globals(self):
+def add_globals(env):
     "Add some Scheme standard procedures."
     import sys, math, cmath, operator as op
-    self.update(vars(math))
-    self.update(vars(cmath))
-    self.update({
+    env.update(vars(math))
+    env.update(vars(cmath))
+    env.update({
      '+':op.add, '-':op.sub, '*':op.mul, '/':op.truediv,
      'not':op.not_,'>':op.gt, '<':op.lt, '>=':op.ge,
      '<=':op.le, '=':op.eq,'equal?':op.eq, 'eq?':op.is_,
@@ -52,18 +44,16 @@ def add_globals(self):
      'null?':lambda x:x==[], 'symbol?':lambda x: isa(x, Symbol),
      'boolean?':lambda x: isa(x, bool), 'pair?':is_pair,
      'port?': lambda x:isa(x,file), 'apply':lambda proc,l: proc(*l),
-     'eval':lambda x: eval(expand(x)), 'load':lambda fn: load(fn), 'call/cc':callcc,
+     'map': lambda f,*x: list(map(f, x)), 'filter': lambda f,x: list(filter(f,x)),
+     'eval':lambda x: eval(expand(x)), 'load':lambda fn: load(fn),
      'open-input-file':open,'close-input-port':lambda p: p.file.close(),
      'open-output-file':lambda f:open(f,'w'), 'close-output-port':lambda p: p.close(),
-     #'eof-object?':lambda x:x is eof_object, 'read-char':parsing.readchar,
+     #'eof-object?':lambda x:x is eof_object, 'read-char': readchar,
      #'read':read, 'write':lambda x,port=sys.stdout:port.write(to_string(x)),
      'display':lambda x,port=sys.stdout:port.write(x if isa(x,str) else to_string(x))})
-    return self
+    return env
 
 isa = isinstance
-
 global_env = add_globals(Env())
 
 
-if __name__ == '__main__':
-    print(global_env.find("null?")["+"])
