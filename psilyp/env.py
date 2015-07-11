@@ -32,7 +32,7 @@ def is_pair(x):
 
 
 def cons(x, y):
-    return [x]+y
+    return [x] + y
 
 
 def add_globals(env):
@@ -51,8 +51,7 @@ def add_globals(env):
      'boolean?': lambda x: isa(x, bool), 'pair?': is_pair,
      'port?': lambda x: isa(x, file), 'apply': lambda proc, l: proc(*l),
      'map': lambda f, x: list(map(f, x)),
-     'filter': lambda f, x: list(filter(f, x)),
-     'eval': lambda x: eval(expand(x)), 'load': lambda fn: load(fn)})
+     'filter': lambda f, x: list(filter(f, x))})
     return env
 
 

@@ -68,9 +68,6 @@ class Test(unittest.TestCase):
         self.assertEqual(eval_string("(< 2 5)"), "#t")
         self.assertEqual(eval_string("(< 5 2)"), "#f")
 
-    def test_quote(self):
-        self.assertEqual(eval_string("'(one 2 3)"), "(one 2 3)")
-
     def test_quasiquote(self):
         eval_string("(define L (list 1 2 3))")
         self.assertEqual(eval_string("`(testing ,L testing)"), "(testing (1 2 3) testing)")
@@ -94,6 +91,21 @@ class Test(unittest.TestCase):
         eval_string("(define (lt5 x) (< x 5))")
         self.assertEqual(eval_string("(filter lt5 '(1 2 3 6 7))"), "(1 2 3)")
 
+    def test_list(self):
+        eval_string("(define L '(1 2 3 4))")
+        self.assertEqual(eval_string("(car L)"), "1")
+        self.assertEqual(eval_string("(cdr L)"), "(2 3 4)")
+        self.assertEqual(eval_string("(length L)"), "4")
+
+    def test_list2(self):
+        eval_string("(define L1 '(1 2))")
+        eval_string("(define L2 '(3 4))")
+        self.assertEqual(eval_string("(append L1 L2)"), "(1 2 3 4)")
+        self.assertEqual(eval_string("(cons  3 L2)"), "(3 3 4)")
+
+    def test_null(self):
+        self.assertEqual(eval_string("(null? '())"), "#t")
+        self.assertEqual(eval_string("(null? '(1 2))"), "#f")
 
 if __name__ == '__main__':
     unittest.main()

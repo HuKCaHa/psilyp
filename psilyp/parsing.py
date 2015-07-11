@@ -93,7 +93,7 @@ def atom(token):
 
 
 def expand(x, toplevel=False):
-    "return tokens that make up x, and signaling SyntaxError."
+    "expand x, and signaling SyntaxError."
     require(x, x != [])                    # () => Error
     if not isa(x, list):                 # constant => unchanged
         return x

@@ -3,13 +3,13 @@ from lisp_eval import lisp_eval
 import sys
 
 
-def repl(prompt='psylip> ', inport=InPort(sys.stdin), out=sys.stdout):
+def repl(prompt='psylip> ', inport=InPort(sys.stdin)):
     "A prompt-read-eval-print loop."
     print("psilyp version 1.0")
     while True:
         try:
             if prompt:
-                print(prompt, end="")
+                print(prompt, end="", file=sys.stdout)
 
             val = eval_string(inport)
 
@@ -36,14 +36,13 @@ def eval_string(inport):
 
 def load(filename):
     "Eval every expression from a file."
-    repl(None, InPort(open(filename)), None)
+    repl(None, InPort(open(filename)))
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        repl()
-    else:
+    if len(sys.argv) == 2:
         try:
             load(sys.argv[1])
         except FileNotFoundError:
-            repl()
+            pass
+    repl()
