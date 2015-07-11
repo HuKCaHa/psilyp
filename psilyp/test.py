@@ -86,6 +86,14 @@ class Test(unittest.TestCase):
         eval_string("(set! a 4)")
         self.assertEqual(eval_string("a"), "4")
 
+    def test_map(self):
+        eval_string("(define (id x) x)")
+        self.assertEqual(eval_string("(map id '(1 2 3 4))"), "(1 2 3 4)")
+
+    def test_filter(self):
+        eval_string("(define (lt5 x) (< x 5))")
+        self.assertEqual(eval_string("(filter lt5 '(1 2 3 6 7))"), "(1 2 3)")
+
 
 if __name__ == '__main__':
     unittest.main()

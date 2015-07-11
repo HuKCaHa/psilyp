@@ -7,7 +7,7 @@ Number = (int, float)
 class Env(dict):
     "An environment: a dict of {'var':val} pairs, with an outer Env."
     def __init__(self, params=(), args=(), outer=None):
-        # Bind param list to corresponding args, or single parm to list of args
+        # Bind param list to corresponding args, or single param to list of args
         self.outer = outer
         if isa(params, Symbol):
             self.update({params: list(args)})

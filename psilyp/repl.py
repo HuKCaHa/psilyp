@@ -5,22 +5,21 @@ import sys
 
 def repl(prompt='psylip> ', inport=InPort(sys.stdin), out=sys.stdout):
     "A prompt-read-eval-print loop."
-    sys.stderr.write("psilyp version 1.0\n")
+    print("psilyp version 1.0")
     while True:
         try:
             if prompt:
-                print(prompt, sep="\n", end=" ")
+                print(prompt, end="")
 
             val = eval_string(inport)
 
             if val is eof_object:
                 break
-
-            if val is not None and out:
+            if val is not None:
                 print(val)
 
         except Exception as e:
-            print ('%s: %s' % (type(e).__name__, e))
+            print('%s: %s' % (type(e).__name__, e))
 
 
 def eval_string(inport):
@@ -39,5 +38,12 @@ def load(filename):
     "Eval every expression from a file."
     repl(None, InPort(open(filename)), None)
 
+
 if __name__ == '__main__':
-    repl()
+    if len(sys.argv) == 1:
+        repl()
+    else:
+        try:
+            load(sys.argv[1])
+        except FileNotFoundError:
+            repl()
