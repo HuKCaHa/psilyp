@@ -41,7 +41,7 @@ def add_globals(env):
     env.update(vars(math))
     env.update(vars(cmath))
     env.update({
-     '+': op.add, '-': op.sub, '*': op.mul, '/': op.truediv,
+     '+': op.add, '-': op.sub, '*': op.mul, '/': op.truediv, '**': op.pow,
      'not': op.not_, '>': op.gt, '<': op.lt, '>=': op.ge,
      '<=': op.le, '=': op.eq, 'equal?': op.eq, 'eq?': op.is_,
      'length': len, 'cons': cons, 'car': lambda x: x[0],
