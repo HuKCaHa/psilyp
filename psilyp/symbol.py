@@ -27,10 +27,12 @@ def to_string(x):
     elif isa(x, Symbol):
         return x
     elif isa(x, str):
-        return '"%s"' % x.encode('string_escape').replace('"', r'\"')
+        return '"%s"' % x.replace('"', r'\"')
     elif isa(x, list):
         return '('+' '.join(list(map(to_string, x)))+')'
     elif isa(x, complex):
         return str(x).replace('j', 'i')
     else:
         return str(x)
+
+

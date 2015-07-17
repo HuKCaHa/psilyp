@@ -79,7 +79,7 @@ def atom(token):
     elif token == '#f':
         return False
     elif token[0] == '"':
-        return token[1:-1].decode('string_escape')
+        return bytes(token[1:-1], "utf-8").decode('unicode_escape')
     try:
         return int(token)
     except ValueError:
